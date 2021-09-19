@@ -3,7 +3,7 @@ title: "Laravel-Excelで大容量のエクセルファイルをエクスポー�
 emoji: "😀"
 type: "tech"
 topics: [PHP,S3,Laravel,queue,Laravel-Excel]
-published: false
+published: true
 ---
 ## 背景
 Laravelには特定のモデルのレコードをエクセル形式で読み書きしてくれる[Laravel-Excel](https://laravel-excel.com/)というライブラリが存在する。
