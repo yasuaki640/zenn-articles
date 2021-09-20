@@ -1,6 +1,6 @@
 ---
 title: "Laravel-Excelで大容量のエクセルファイルをエクスポートする際の対策"
-emoji: "😀"
+emoji: "📂"
 type: "tech"
 topics: [PHP,S3,Laravel,queue,Laravel-Excel]
 published: true
