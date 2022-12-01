@@ -3,7 +3,7 @@ title: "TypeScriptで簡易DBを実装する"
 emoji: "🉑"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: [typescript,nodejs,sqlite,db]
-published: false
+published: true
 ---
 
 # はじめに
@@ -106,5 +106,9 @@ JSはメモリに直接アクセスできませんが、[`Buffer.alloc`](https:/
 # 終わりに
 
 今回はTypeScriptで超簡素なDBを実装してみました。
+
+普段使っている何気なく使っているライブラリを自作することは学びが多く、普段の開発において視点をちょっとだけ広く持てた気がします。
+
+もしよろしければ一緒に勉強しませんか？
 
 ご意見、間違いありましたらコメントお待ちしています！！！
