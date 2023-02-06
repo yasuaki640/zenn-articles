@@ -291,12 +291,12 @@ AWS_USE_PATH_STYLE_ENDPOINT=false
 `localhost/users/excel`にアクセスし「Add a job of export user models in queue」リンクをクリック
 画面上部に成功メッセージが表示されることを確認。
 
-<img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/59a7f34b-9837-2682-d3c5-7db55f50d81b.png" width=50%>
+![](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/59a7f34b-9837-2682-d3c5-7db55f50d81b.png  =400x)
 
 mailtrapでファイルダウンロードリンク付きのメールが送信されることを確認する。
 ※ファイルダウンロードのためにはバケットの公開範囲を設定してください
 
-<img src="https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/1dc89cfe-a14e-26a6-e115-d29df95c9b6f.png">
+![](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/1dc89cfe-a14e-26a6-e115-d29df95c9b6f.png)
 
 ## 結言
 
