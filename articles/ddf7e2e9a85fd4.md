@@ -148,6 +148,94 @@ Yay!!
 
 ### OpenAI APIをつなぎこむ
 
+:::message 
+いちいちOpenAI APIクライアントをnewするのが面倒なので、Middlewareでnewしていますが、この方法で正しいのかはよくわかっていません。(いい方法あったらコメントで教えてね)
+:::
+
+OpenAI APIクライアントをnewするMiddlewareを定義する。
+
+```ts:openai.ts
+export const OpenaiMiddleware = createMiddleware<AppEnv>(async (c, next) => {
+  const client = new OpenAI({
+    apiKey: c.env.OPENAI_API_KEY,
+  });
+  c.set("openai", client);
+  await next();
+});
+```
+
+テストでモックし易いように、APIを叩くコードを関数にまとめる。
+
+```ts:openai-client.ts
+export const fetchCompletion = async (
+  openai: OpenAI,
+  newMessage: string,
+  messageHistory?: ChatCompletionMessageParam[],
+) =>
+  openai.chat.completions.create({
+    messages: [
+      ...(messageHistory ?? []),
+      { role: "user", content: newMessage },
+    ],
+    model: "xxx",
+  });
+```
+
+リクエストハンドラでAPIを叩く関数を呼び出す。
+
+```tsx:index.tsx
+  const completion = await fetchCompletion(
+    c.var.openai,
+    newMessage,
+    messageHistory,
+  );
+```
+
+Yay!!
+
+![](/images/gpt-web-client/room.png =500x)
+
+### テストを書く
+
+APIテスト?も簡単にかける。
+
+今回はフォームの送信するとリダイレクトされることをテストする。
+
+切り出したDBアクセスの関数をモック
+
+```ts:index.spec.ts
+    mockGetRoom.mockResolvedValue({
+      roomId: "test-room-id",
+      roomTitle: "Test Room",
+      roomCreated: "2021-01-01T00:00:00Z",
+      roomUpdated: "2021-01-02T00:00:00Z",
+    });
+```
+
+POSTリクエストを送る。
+
+```ts:index.spec.ts
+    const res = await app.request(
+      `/chats/test-room-id`,
+      {
+        method: "POST",
+        body: new URLSearchParams({ message: "Hello, World!" }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: "Basic dGVzdDp0ZXN0",
+        },
+      },
+      MOCK_BINDINGS,
+    );
+```
+
+リダイレクトされることをテストする。
+
+```ts:index.spec.ts
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe(`/chats/test-room-id`);
+```
+
 ## 目標規定文
 
 hono jsxならUIのあるアプリケーションを簡単に書くことができる
