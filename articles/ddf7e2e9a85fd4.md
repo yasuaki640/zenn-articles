@@ -1,12 +1,12 @@
 ---
-title: "Hono x JSXで雑Chat GPTもどきを作る"
+title: "Hono x JSXで雑ChatGPTもどきを作る"
 emoji: "🚧"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: []
 published: false
 ---
 
-もうChat GPTなしの生活は耐えられないが、たまにしか使わないのに定額料金はしんどい、、円安だし、、、
+もうChat GPTなしの生活は耐えられないが、たまにしか使わないのに定額料金はしんどい、、
 ↓
 じゃあOpenAIのAPIを直接呼ぶアプリを自作すれば安く済ませられるのでは?
 ↓
@@ -19,20 +19,20 @@ published: false
 
 ## 実装
 
-公式の手順に従ってスキャフォールドを作成
+公式の手順に従ってスキャフォールドを作成。
 ※環境は`cloudflare-workers`を選択
 
 https://hono.dev/getting-started/basic#starter
 
-JSXを使えるように`tsconfig.json`をいじる
+JSXを使えるように`tsconfig.json`をいじる。
 
 https://hono.dev/guides/jsx#settings
 
 ### ルーティング & JSXで画面表示
 
-`index.ts`を`index.tsx`にリネーム
+`index.ts`を`index.tsx`にリネーム。
 
-共通レイアウトの作成
+共通レイアウトの作成。
 
 ```tsx:Layout.tsx
 export const Layout: FC = ({ children }) => (
@@ -42,13 +42,13 @@ export const Layout: FC = ({ children }) => (
 );
 ```
 
-共通レイアウト描画用のミドルウェアを定義
+共通レイアウト描画用のミドルウェアを定義。
 
 ```typescript:layout.ts
 export const LayoutMiddleware = jsxRenderer(Layout);
 ```
 
-トップ画面用のレイアウトを定義
+トップ画面用のレイアウトを定義。
 
 ```tsx:Top.tsx
 export const Top: FC = () => (
@@ -77,25 +77,25 @@ Yay!!
 
 今回はCloudflare D1 x Drizzle ORMを使う。
 
-下記に従ってD1を用意。(今回はlocal環境のみ用意)
+下記に従ってD1を用意。(今回はlocal環境のみで使います)
 
 https://developers.cloudflare.com/d1/get-started/
 
-下記に従って、Drizzle ORMをインストール
+下記に従って、Drizzle ORMをインストール。
 
 https://orm.drizzle.team/docs/get-started-sqlite#cloudflare-d1
 
-`wrangler.toml`に`migrations_dir`を追加
+`wrangler.toml`に`migrations_dir`を追加。
 
 ```toml
 [[d1_databases]]
 binding = "DB" 
 database_name = "gpt-web-client"
 database_id = "xxxxxx"
-migrations_dir = "drizzle/" # !!ここを追加!!
+migrations_dir = "drizzle/" # <- ここを追加
 ```
 
-設定ファイルを追加
+設定ファイルを追加。
 
 ```ts:drizzle.config.ts
 import { defineConfig } from "drizzle-kit";
@@ -106,7 +106,7 @@ export default defineConfig({
 })
 ```
 
-適当なスキーマ定義を作成
+適当なスキーマ定義を作成。
 
 ```ts:schema.ts
 export const Rooms = sqliteTable("Rooms", {
@@ -115,19 +115,19 @@ export const Rooms = sqliteTable("Rooms", {
   ...
 ```
 
-マイグレーションファイルを出力
+マイグレーションファイルを出力。
 
 ```sh
 npx drizzle-kit generate:sqlite --schema=src/schema.ts
 ```
 
-ローカルにマイグレーションを実行
+ローカルにマイグレーションを実行。
 
 ```sh
 npx  wrangler d1 migrations apply gpt-web-client --local
 ```
 
-ロジックで適当なデータを取得
+ロジックで適当なデータを取得。
 
 ```ts:index.tsx
 app.get("/chats", async (c) => {
@@ -199,9 +199,9 @@ Yay!!
 
 APIテスト?も簡単にかける。
 
-今回はフォームの送信するとリダイレクトされることをテストする。
+今回はユーザーが質問を投げるとリダイレクトされることをテストする。
 
-切り出したDBアクセスの関数をモック
+切り出したDBアクセスの関数をモック。
 
 ```ts:index.spec.ts
     mockGetRoom.mockResolvedValue({
@@ -246,13 +246,13 @@ Yay!!
 
 4年前にExpressで簡単なアプリを作ったが、それに比べてHonoの開発者体験は格段に良い。(TSの型サポート、環境構築、デプロイの容易さなど)
 
-また新興のFWだが、エコシステムのサポートが手厚く、簡単なアプリなら特に苦も無く作れてしまった。
+また新興のFWだが、Cloudflare D1などエコシステムのサポートが手厚く、簡単なアプリなら特に苦も無く作れてしまった。
 
-更に、JSXフレンドリーな点もポイントが高く、筆者が書いてきたLaravelのBladeのようなテンプレートエンジンよりも、JSXの方が書きやすいと感じた。(特に型サポートが嬉しい)
+更に、JSXフレンドリーな点もポイントが高く、筆者が書いてきたLaravelのBladeのようなテンプレートエンジンよりも、型サポートやReactで慣れている分、JSXの方が書きやすいと感じた。
 
 ### わからなかった点
 
-index.tsxが肥大化してしまっているので、どう分割するのがベストプラクティスなんだろう。  
+index.tsxが肥大化してしまっているので、どう分割するのがベストプラクティスなんだろう?  
 ([公式のサンプル](https://github.com/honojs/examples/blob/main/blog/src/api.ts)はまとまったルートごとにファイルを分割しているが、Laravelのようにrouteファイルがあって、コントローラーにリクエストハンドラーを書くような形式でやってみたかった)
 なんかいい例あったら教えて下さい。
 
