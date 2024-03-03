@@ -2,8 +2,8 @@
 title: "Hono x JSXで雑ChatGPTもどきを作る"
 emoji: "🚧"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: []
-published: false
+topics: ["Typescript", "Hono", "OpenAI", "CloudflareD1", "DrizzleORM"]
+published: true
 ---
 
 もうChat GPTなしの生活は耐えられないが、たまにしか使わないのに定額料金はしんどい、、
@@ -250,7 +250,7 @@ Yay!!
 
 更に、JSXフレンドリーな点もポイントが高く、筆者が書いてきたLaravelのBladeのようなテンプレートエンジンよりも、型サポートやReactで慣れている分、JSXの方が書きやすいと感じた。
 
-### わからなかった点
+### ちょっと迷った点
 
 index.tsxが肥大化してしまっているので、どう分割するのがベストプラクティスなんだろう?  
 ([公式のサンプル](https://github.com/honojs/examples/blob/main/blog/src/api.ts)はまとまったルートごとにファイルを分割しているが、Laravelのようにrouteファイルがあって、コントローラーにリクエストハンドラーを書くような形式でやってみたかった)
@@ -260,5 +260,9 @@ index.tsxが肥大化してしまっているので、どう分割するのが�
 
 バリデーションやエラーハンドリングなどなく、かなり雑だが、Hono x JSXならHTMLを返すアプリを一瞬で実装できてしまった。  
 今後は実装したアプリをHonoXに移行して、目玉機能のファイルベースルーティングを試してみたい。
+
+最後に全体のソースコードはこちら。
+
+https://github.com/yasuaki640/gpt-web-client
 
 以上。
