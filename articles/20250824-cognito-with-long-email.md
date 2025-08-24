@@ -3,7 +3,7 @@ title: "Amazon Cognito User Poolを本番導入するときは、メールアド
 emoji: "⚠️"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["aws", "cognito", "email", "authentication"]
-published: false
+published: true
 ---
 
 ## 背景
