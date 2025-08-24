@@ -89,7 +89,7 @@ https://orm.drizzle.team/docs/get-started-sqlite#cloudflare-d1
 
 ```toml
 [[d1_databases]]
-binding = "DB" 
+binding = "DB"
 database_name = "gpt-web-client"
 database_id = "xxxxxx"
 migrations_dir = "drizzle/" # <- ここを追加
@@ -148,7 +148,7 @@ Yay!!
 
 ### OpenAI APIをつなぎこむ
 
-:::message 
+:::message
 いちいちOpenAI APIクライアントをnewするのが面倒なので、Middlewareでnewしていますが、この方法で正しいのかはよくわかっていません。(いい方法あったらコメントで教えてね)
 :::
 

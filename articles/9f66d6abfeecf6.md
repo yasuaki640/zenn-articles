@@ -2,7 +2,7 @@
 title: "【Laravel 8】Bulk insertはEloquent::upsertメソッドが便利"
 emoji: "👨‍👩‍👧‍👦"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: [PHP,Laravel]
+topics: [PHP, Laravel]
 published: true
 ---
 
@@ -83,7 +83,7 @@ Laravel 7までは複数のデータを同時にINSERTするには`DB`ファサ�
 (ここでは10回実行した平均をとっている。)
 
 ```
-DB::insert処理時間:       0.2898751826秒  
+DB::insert処理時間:       0.2898751826秒
 Eloquent::upsert処理時間: 0.3419602284秒
 ```
 
@@ -95,6 +95,5 @@ Eloquent::upsert処理時間: 0.3419602284秒
 というわけで複数レコードinsert時は`Eloquent::upsert`を使っていきやしょう。  
 ([サンプルコード](https://github.com/yasuaki640/laravel-excel-sample/blob/for-qiita-09-18/backend/tests/Feature/UserRepostitoryTest.php)おいてあります。)  
 (記事へのご指摘歓迎です。)
-
 
 [^1]: [insert文を発行するメソッド](https://github.com/laravel/framework/blob/8.x/src/Illuminate/Database/Query/Grammars/MySqlGrammar.php#L155-L175)では[`ON DUPLICATE KEY UPDATE`](https://dev.mysql.com/doc/refman/5.6/ja/insert-on-duplicate.html)構文が使われているが、これはそもそもユニークキーやプライマリーキーを指定する必要がない。

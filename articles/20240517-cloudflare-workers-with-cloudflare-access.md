@@ -2,7 +2,8 @@
 title: "【セキュアな個人開発のお供に!!】 Honoで作ったMPAに、Cloudflare Accessを使って簡単に認証をかける"
 emoji: "🔐"
 type: "tech"
-topics: [ "cloudflare", "typescript", "hono", "cloudflareworkers", "cloudflareaccess"]
+topics:
+  ["cloudflare", "typescript", "hono", "cloudflareworkers", "cloudflareaccess"]
 published: true
 ---
 
@@ -56,8 +57,8 @@ Websites > Home > (登録したドメインの)Overview > DNS > Recordsをクリ
 
 下記情報のレコードを登録する。
 
-| Type  | Name        | Target     |
-|-------|-------------|------------|
+| Type  | Name           | Target             |
+| ----- | -------------- | ------------------ |
 | CNAME | [Workerの名前] | [取得したドメイン] |
 
 ### 認証を実装するエンドポイントの作成
@@ -68,8 +69,8 @@ Websites > Home > (登録したドメインの)Overview > DNS > Recordsをクリ
 
 下記情報を登録。
 
-| Route                      | Zone       |
-|----------------------------|------------|
+| Route                                 | Zone               |
+| ------------------------------------- | ------------------ |
 | [Workerの名前].[取得したドメイン]`/*` | [取得したドメイン] |
 
 :::message
@@ -96,13 +97,12 @@ Self-hostedを選択。
 
 下記情報を入力。
 
-| 設定項目               | 値                      |
-|--------------------|------------------------|
-| Application name   | [Workerの名称(がわかりやすい)]   |
-| Session Duration   | [なるべく短めのDuration]      |
+| 設定項目           | 値                                |
+| ------------------ | --------------------------------- |
+| Application name   | [Workerの名称(がわかりやすい)]    |
+| Session Duration   | [なるべく短めのDuration]          |
 | Application domain | [Workerの名前].[取得したドメイン] |
-| Path               | *                      |
-
+| Path               | \*                                |
 
 Accept all available identity providers を無効化し、Accept Identity Providers をGitHub認証のみにする。
 
@@ -112,14 +112,14 @@ Nextをクリック。
 
 下記情報でPolicyを作成する。
 
-| Policy name (Required) | Action (Required) | Session duration  |
-|------------------------|-------------------|-------------------|
-| [任意のpolicy名]           | Allow             | [なるべく短めのDuration] |
+| Policy name (Required) | Action (Required) | Session duration         |
+| ---------------------- | ----------------- | ------------------------ |
+| [任意のpolicy名]       | Allow             | [なるべく短めのDuration] |
 
 Configure rulesで下記情報を入力。
 
-| Selector | Value                         |
-|----------|-------------------------------|
+| Selector | Value                                              |
+| -------- | -------------------------------------------------- |
 | Emails   | [アクセス許可するGitHubアカウントのメールアドレス] |
 
 Setupセクションは任意の項目を入力して 「Add application」をクリック。

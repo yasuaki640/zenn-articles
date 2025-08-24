@@ -2,10 +2,12 @@
 title: "Laravel-Excelで大容量のエクセルファイルをエクスポートする際の対策"
 emoji: "📂"
 type: "tech"
-topics: [PHP,S3,Laravel,queue,Laravel-Excel]
+topics: [PHP, S3, Laravel, queue, Laravel-Excel]
 published: true
 ---
+
 ## 背景
+
 Laravelには特定のモデルのレコードをエクセル形式で読み書きしてくれる[Laravel-Excel](https://laravel-excel.com/)というライブラリが存在する。
 
 しかし多くのレコードをエクスポートすると処理時間が長引き、クレームやユーザーの離脱等が発生すると考えられる。
@@ -18,8 +20,8 @@ Laravelには特定のモデルのレコードをエクセル形式で読み書�
 
 1. 処理をLaravelの[Queue](https://laravel.com/docs/8.x/queues)に入れる
 2. エクスポート処理
-3.  エクスポートが終わったらエクセルファイルをS3にアップロード
-4.  ユーザーにダウンロードリンクをメール通知
+3. エクスポートが終わったらエクセルファイルをS3にアップロード
+4. ユーザーにダウンロードリンクをメール通知
 
 ### 実装
 
@@ -53,6 +55,7 @@ class UsersExport implements FromCollection
     }
 }
 ```
+
 S3にアップロードするためのライブラリを追加
 
 ```shell
@@ -246,7 +249,6 @@ Controllerクラスで定義したジョブを呼び出す。
     }
 ```
 
-
 #### 動作確認
 
 [mailtrap](https://mailtrap.io/)に登録し、`.env`に必要な情報を入力する。
@@ -272,7 +274,6 @@ AWS_BUCKET=********
 AWS_USE_PATH_STYLE_ENDPOINT=false
 ```
 
-
 適当なBladeファイルを定義しキューエクスポート用のリンクを追加
 
 ```html:index.blade.php
@@ -291,7 +292,7 @@ AWS_USE_PATH_STYLE_ENDPOINT=false
 `localhost/users/excel`にアクセスし「Add a job of export user models in queue」リンクをクリック
 画面上部に成功メッセージが表示されることを確認。
 
-![](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/59a7f34b-9837-2682-d3c5-7db55f50d81b.png  =400x)
+![](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/290859/59a7f34b-9837-2682-d3c5-7db55f50d81b.png =400x)
 
 mailtrapでファイルダウンロードリンク付きのメールが送信されることを確認する。
 ※ファイルダウンロードのためにはバケットの公開範囲を設定してください
@@ -313,4 +314,3 @@ Excel::queue(new UsersExport, 'users.xlsx', 's3');
 ## 補足
 
 ※記事へのご指摘歓迎します。
-

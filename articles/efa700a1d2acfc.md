@@ -2,7 +2,7 @@
 title: "TypeScriptで簡易DBを実装する"
 emoji: "🉑"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: [typescript,nodejs,sqlite,db]
+topics: [typescript, nodejs, sqlite, db]
 published: true
 ---
 
