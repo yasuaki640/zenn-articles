@@ -1,6 +1,6 @@
 ---
-title: "Amazon Cognito User Poolを本番導入するときは、長いメールアドレスに注意"
-emoji: "📧"
+title: "Amazon Cognito User Poolを本番導入するときは、メールアドレスの文字長制限に注意"
+emoji: "⚠️"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["aws", "cognito", "email", "authentication"]
 published: false
