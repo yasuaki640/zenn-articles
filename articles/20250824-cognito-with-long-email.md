@@ -10,7 +10,7 @@ published: false
 
 Amazon Cognito User Pool という認証認可を肩代わりしてくれるサービスをユーザー向けに本番導入した。
 
-いざリリースとなり、テストケースを作っていると「このサービスって email の文字制限どうなってるんだっけ?」となり検証のメモを残す。
+いざリリースとなり、テストケースを作っていると「このサービスって email の文字制限はどうなってるんだっけ?」となり検証のメモを残す。
 
 ## 前提
 
@@ -46,9 +46,9 @@ resource "aws_cognito_user_pool" "example" {
 
 ### Admin Create Userでは 128 文字を超えるEmailを登録できない。
 
-サインイン識別子のオプション -> メールアドレスに設定すると、User Pool内部では usernameがemailと同等とみなされる。
+サインイン識別子のオプション -> メールアドレス(`username_attributes = ["email"]`)に設定すると、User Pool内部では usernameが自動的にUUIDに変換され、emailアドレスがサインイン識別子として機能する。
 
-しかしusernameは128文字上限のため、それを超えるメールアドレスは登録できない、、、
+しかし**Admin Create User APIのusernameパラメータは128文字上限**のため、254文字(RFC 5321上限)のemailアドレスを直接指定して登録することはできない。
 
 ```bash
 # 254文字のemail(RFC上限)のEmailを作成
@@ -71,7 +71,9 @@ aws cognito-idp admin-create-user \
 aws cognito-idp admin-create-user \
   --user-pool-id ap-northeast-1_E8sXPyQA5 \
   --username "temp@example.com" \
-  --user-attributes Name=email,Value="temp@example.com"
+  --user-attributes Name=email,Value="temp@example.com" \
+  --temporary-password "TempPass123!" \
+  --message-action SUPPRESS
 
 # 2. 254文字emailに更新（email_verifiedと同時設定が必須）
 aws cognito-idp admin-update-user-attributes \
@@ -84,8 +86,8 @@ aws cognito-idp admin-update-user-attributes \
 
 注意事項としては
 
-1. email_verified をtrueにしないと更新されないので注意
-1. 長いemailアドレスの検索はAdmin Get User APIの検索文字列長上限(128文字)に引っかかるため、subを指定するか、List Users APIで前方一致検索を掛ける必要がある
+1. email_verified をtrueにしないとEmailが更新されないので注意
+1. 長いemailアドレスの検索はAdmin Get User APIの検索文字列長上限(128文字)に引っかかるため、subを指定するか、List Users APIで前方一致検索をかける必要がある
 
 ## まとめ
 
@@ -97,8 +99,12 @@ aws cognito-idp admin-update-user-attributes \
 
 ## 感想
 
-Cognitoの導入理由としては、AWSに閉じられること、価格が安いこと、などあるが細かいAPIセットのIFにハマりどころが多く、やはり価格なりなのかなと感じてしまった。
+Cognitoの導入理由としては、AWSに閉じられること、価格が安いこと、などあるが細かいAPIセットのインターフェースにハマりどころが多く、やはり価格なりなのかなと感じてしまった。
 
 しかし最近はHosted UIの日本語対応など、大きなアップデートもあるため、今後に期待したい。
 
 以上。
+
+## 補足
+
+間違いあればご指摘お願いします。
