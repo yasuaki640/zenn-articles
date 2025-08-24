@@ -1,5 +1,5 @@
 ---
-title: "Amazon Cognito User Poolを使うときは、長いメールアドレスに注意"
+title: "Amazon Cognito User Poolを本番導入するときは、長いメールアドレスに注意"
 emoji: "📧"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["aws", "cognito", "email", "authentication"]
@@ -8,53 +8,50 @@ published: false
 
 ## 背景
 
-AWS Cognitoでユーザー管理を行う際、長いメールアドレスを持つユーザーの登録で予期しない制限に遭遇することがあります。本記事では、実際にAWS CLIを使って検証した結果をまとめ、Cognitoの文字数制限とその回避方法について解説します。
+Amazon Cognito User Pool という認証認可を肩代わりしてくれるサービスをユーザー向けに本番導入した。
 
-## 発見した制限
+いざリリースとなり、テストケースを作っていると「このサービスって email の文字制限どうなってるんだっけ?」となり検証のメモを残す。
 
-### UsernameAttributes設定による動作の違い
+## 前提
 
-Cognito User Poolの`UsernameAttributes`設定により、メールアドレスの扱いが大きく変わります。
+### CognitoのAdmin Create Userを使ってユーザー登録を行うこと。
 
-#### 従来型（UsernameAttributesなし）
+開発時は、Hosted UI経由の登録がメインでなく、API経由で登録されるサービスだった。
+
+このようなユースケースは、誰でも登録できない管理画面系の開発では多いと思う。 (特にエンタープライズ系)
+
+### サインイン識別子のオプションが、メールアドレスで設定されていること。
+
+![サインイン識別子のオプション設定画面](/images/20250824-cognito-long-email/cognito-signin-options.png)
+
+:::message
+※ Hosted UIでEmailによるログインをさせたい場合は、上記の設定でないとできなかった。
+※ サインイン識別子のオプション -> ユーザー名、 サインアップのための必須属性 -> メールアドレスだと、そもそもHosted UIでEmailログインができない。(試した限りは)
+:::
+
+:::message
+User Poolを一度作成するとこの属性は変えられないので、注意すること。
+:::
+
+terraformでの設定方法は下記。
+
 ```hcl
 resource "aws_cognito_user_pool" "example" {
   name = "example-user-pool"
-  
-  # username_attributes は指定しない（デフォルト）
-}
-```
-- usernameとemailが別々に管理される
-- 長いemailアドレスでも直接作成可能
-- サインイン時はusername/email両方使用可能
-
-#### モダン型（UsernameAttributes: ["email"]）
-```hcl
-resource "aws_cognito_user_pool" "example" {
-  name = "example-user-pool"
-  
   username_attributes = ["email"]
 }
 ```
-- emailがサインイン識別子として機能
-- usernameは自動生成UUID
-- **128文字制限が適用される**
 
-### API別の制限一覧
+## 発生事象
 
-| API | 制限内容 | 最大文字数 |
-|-----|---------|-----------|
-| AdminCreateUser | username parameter | 128文字 |
-| AdminUpdateUserAttributes | email属性 | 254文字 |
-| AdminGetUser | username parameter | 128文字 |
-| ListUsers (filter) | filter文字列全体 | 256文字 |
+### Admin Create Userでは 128 文字を超えるEmailを登録できない。
 
-## 実際の検証結果
+サインイン識別子のオプション -> メールアドレスに設定すると、User Pool内部では usernameがemailと同等とみなされる。
 
-### 128文字超のemail作成試行
+しかしusernameは128文字上限のため、それを超えるメールアドレスは登録できない、、、
 
 ```bash
-# 254文字のemailで作成試行 → 失敗
+# 254文字のemail(RFC上限)のEmailを作成
 aws cognito-idp admin-create-user \
   --user-pool-id ap-northeast-1_E8sXPyQA5 \
   --username "$(printf 'a%.0s' {1..242})@example.com" \
@@ -63,7 +60,11 @@ aws cognito-idp admin-create-user \
 # エラー: Member must have length less than or equal to 128
 ```
 
-### 回避方法：UpdateUserAttributesを使用
+## 回避方法
+
+### UpdateUserAttributes を使い、登録後に手動更新する
+
+上記事象のため、(API経由でユーザー登録する場合) まずはダミーemailで登録してから、更新をかける。
 
 ```bash
 # 1. 短いemailで作成
@@ -78,49 +79,26 @@ aws cognito-idp admin-update-user-attributes \
   --username [UUID] \
   --user-attributes \
     Name=email,Value="$(printf 'k%.0s' {1..242})@example.com" \
-    Name=email_verified,Value=true
+    Name=email_verified,Value=true # email_verified をtrueにしないと更新されないので注意
 ```
 
-### 重要な発見
+注意事項としては
 
-1. **email単独更新は失敗**：`UsernameAttributes: ["email"]`環境では、email属性のみの更新はサイレントに失敗
-2. **email_verifiedとの同時更新が必要**：セキュリティ機能として、認証済み状態の設定が必須
-3. **UUID経由でのみ操作可能**：254文字emailユーザーは、管理操作でUUIDが必要
-
-## 実用的な対処法
-
-### 長いemailユーザーへの対応策
-
-```bash
-# 254文字emailユーザーの確認方法
-aws cognito-idp list-users --user-pool-id [USER_POOL_ID] | \
-  jq '.Users[] | select(.Attributes[] | select(.Name=="email" and (.Value | length) > 128))'
-
-# UUIDでの操作
-aws cognito-idp admin-get-user \
-  --user-pool-id [USER_POOL_ID] \
-  --username [UUID]
-```
-
-### 運用上の注意点
-
-- **AdminGetUser**：254文字emailでは直接アクセス不可、UUIDが必要
-- **Filter検索**：長いemailでのfilter検索は文字列制限で失敗
-- **サインイン**：実際のサインイン動作への影響は要検証
-
-## RFC標準との乖離
-
-| 標準 | 最大長 | Cognitoでの実際の制限 |
-|------|--------|---------------------|
-| RFC 5321 | 254文字 | CreateUser: 128文字 / UpdateUser: 254文字 |
-| RFC 5322 | 320文字 | 対応不可 |
+1. email_verified をtrueにしないと更新されないので注意
+1. 長いemailアドレスの検索はAdmin Get User APIの検索文字列長上限(128文字)に引っかかるため、subを指定するか、List Users APIで前方一致検索を掛ける必要がある
 
 ## まとめ
 
-- **`UsernameAttributes: ["email"]`設定では128文字制限**がCreateUser時に適用される
-- **254文字までのemailは技術的には保存可能**だが、UpdateUserAttributesの2段階操作が必要
-- **実運用では管理APIの制限**により、長いemailアドレスユーザーの取り扱いが困難
-- **設計時の考慮事項**として、emailアドレスの長さ制限を事前に検討することが重要
+そもそも254文字近くのemailは(通常の開発では)ほぼ存在しないはず、、、
 
-RFC標準に完全準拠したemailアドレス対応が必要な場合は、Cognitoの制限を十分に理解した上で実装方針を検討しましょう。
+※ローカルパートが64文字上限なのでそもそも100文字程度にしかならない
 
+なのでCognito導入時は、Email文字長上限をusernameと同等に128文字で組むのが良いだろう。
+
+## 感想
+
+Cognitoの導入理由としては、AWSに閉じられること、価格が安いこと、などあるが細かいAPIセットのIFにハマりどころが多く、やはり価格なりなのかなと感じてしまった。
+
+しかし最近はHosted UIの日本語対応など、大きなアップデートもあるため、今後に期待したい。
+
+以上。
