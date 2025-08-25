@@ -2,7 +2,7 @@
 title: "Amazon Cognito User Poolを本番導入するときは、メールアドレスの文字長制限に注意"
 emoji: "⚠️"
 type: "tech" # tech: 技術記事 / idea: アイデア
-topics: ["aws", "cognito", "email", "authentication"]
+topics: ["aws", "cognito", "email", "authentication", "zennfes2025infra"]
 published: true
 ---
 
@@ -87,7 +87,7 @@ aws cognito-idp admin-update-user-attributes \
 注意事項としては
 
 1. email_verified をtrueにしないとEmailが更新されないので注意
-1. 長いemailアドレスの検索はAdmin Get User APIの検索文字列長上限(128文字)に引っかかるため、subを指定するか、List Users APIで前方一致検索をかける必要がある
+2長いemailアドレスの検索はAdmin Get User APIの検索文字列長上限(128文字)に引っかかるため、subを指定するか、List Users APIで前方一致検索をかける必要がある
 
 ## まとめ
 
