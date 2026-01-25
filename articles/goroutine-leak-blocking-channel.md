@@ -3,7 +3,7 @@ title: "【Go】goroutineリークで本番環境のメモリを食いつくし�
 emoji: "🔓"
 type: "tech"
 topics: ["go", "goroutine", "channel", "concurrency"]
-published: false
+published: true
 ---
 
 ## 背景
