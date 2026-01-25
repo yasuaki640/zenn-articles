@@ -1,5 +1,5 @@
 ---
-title: "【Go】goroutineが終わらない？バッファなしチャネルで起きるリークを体験してみた"
+title: "【Go】goroutineリークで本番環境のメモリを食いつくしかけた話"
 emoji: "🔓"
 type: "tech"
 topics: ["go", "goroutine", "channel", "concurrency"]
@@ -8,9 +8,13 @@ published: false
 
 ## 背景
 
-業務中にサーバーのCPU使用率が94%に達する問題に遭遇した。
+業務中にサーバーのメモリ使用率が異常に上昇し、プロセスがメモリを食いつくしかける問題に遭遇した。
 
 当時、goroutineについて深く理解しないまま「`go`をつければ非同期で動いてくれるんでしょ」くらいの認識でFire-and-Forget的に処理を投げていた。処理自体は複雑でも重いものでもなかったが、goroutineの終了条件を考慮せずに書いていたため、気づかないうちにgoroutineが溜まり続け、サービスが落ちかける事態になった。
+
+:::message
+**Fire-and-Forgetとは**: 処理を起動したら、その結果を待たずに呼び出し元が先に進むパターン。「撃ったら忘れる」の意味で、非同期処理でよく使われる手法だが、起動した処理の終了管理がおろそかになりやすい。
+:::
 
 この経験から「goroutineリーク」という概念を体系的に理解したくなり、実際にリークを起こすコードを書いて動かしてみることにした。本記事では、最もシンプルな「ブロッキング型」のgoroutineリークを解説する。
 
@@ -24,7 +28,7 @@ Goのガベージコレクタ（GC）は「待機中のgoroutine」を回収し�
 
 ## 問題のあるコード
 
-以下は、Webサーバーのリクエストハンドラをシミュレートしたコードだ。
+以下は、Webサーバーのリクエストハンドラをシミュレートしたコード。
 
 ```go:step1_blocking_leak/main.go
 package main
@@ -43,12 +47,12 @@ func heavyTask() int {
 
 // リクエストハンドラのシミュレーション
 func handleRequest(requestID int) {
-	// バッファなしチャネル（これが落とし穴）
+	// ⚠️ バッファなしチャネル（これが落とし穴）
 	ch := make(chan int)
 
 	go func() {
 		result := heavyTask()
-		ch <- result // ここでブロック！
+		ch <- result // ⚠️ ここでブロック！受信者がいないと永遠に待つ
 		fmt.Printf("[Request %d] 送信完了\n", requestID)
 	}()
 
@@ -96,7 +100,7 @@ func main() {
 最終goroutine数: 11
 ```
 
-**本来なら1（mainのみ）になるはずが、11個のgoroutineが残っている。** これがgoroutineリークだ。
+**本来なら1（mainのみ）になるはずが、11個のgoroutineが残っている。** これがgoroutineリーク。
 
 ## 何が起きているか
 
@@ -126,13 +130,15 @@ Goのランタイムから見ると、チャネル待ちのgoroutineは「処理
 
 :::message
 goroutineは「終了条件を満たせない状態」でも、ランタイム上は「生きている」と判断される。
+
+参考: [A Guide to the Go Garbage Collector](https://go.dev/doc/gc-guide)
 :::
 
 ## 解決策
 
 ### 方法1: バッファ付きチャネルを使う
 
-最もシンプルな解決策は、チャネルにバッファを持たせることだ。
+最もシンプルな解決策は、チャネルにバッファを持たせること。
 
 ```go:修正版
 ch := make(chan int, 1)  // バッファサイズ1
@@ -167,10 +173,10 @@ func handleRequest(requestID int) {
 	ch := make(chan int, 1)
 
 	go func() {
-		result := heavyTask()
+		result := heavyTask() // ← この処理は同期的に実行される（2秒ブロック）
 		select {
-		case ch <- result:
-		case <-ctx.Done(): // キャンセルされたら送信せず終了
+		case ch <- result:    // チャネルに空きがあれば送信
+		case <-ctx.Done():    // heavyTask完了後、ctx がキャンセル済みならここに入る
 			return
 		}
 	}()
