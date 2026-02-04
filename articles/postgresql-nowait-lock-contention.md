@@ -3,7 +3,7 @@ title: "【PostgreSQL】ロック競合に遭遇して学んだNOWAITの使い�
 emoji: "🔒"
 type: "tech"
 topics: ["postgresql", "database", "lock", "transaction"]
-published: false
+published: true
 ---
 
 ## 背景
