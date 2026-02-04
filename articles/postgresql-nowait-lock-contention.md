@@ -1,6 +1,6 @@
 ---
-title: "【PostgreSQL】ロック競合に遭遇して学んだNOWAITの使いどころ"
-emoji: "🔒"
+title: "PostgreSQLのNOWAITを使ったロック競合対策"
+emoji: "⏱️"
 type: "tech"
 topics: ["postgresql", "database", "lock", "transaction"]
 published: true
@@ -10,13 +10,16 @@ published: true
 
 本番環境のログで`could not obtain lock on row`というエラーを発見した。調査すると、既存コードに`FOR UPDATE NOWAIT`が設定されており、ロック競合時に即座にエラーを返す動作になっていた。
 
-当時の自分は「PostgreSQLはMVCCだから読み取りと書き込みは競合しない」という知識しかなく、なぜこのエラーが出るのかピンとこなかった。これをきっかけにロック競合について調べ、NOWAITの役割と、そもそもの根本対策を理解することができた。
+当時の自分は「PostgreSQLはMVCCだから、いい感じにロック競合しないんじゃないの?」程度の知識しかなく、なぜこのエラーが出るのかピンとこなかった。これをきっかけにロック競合について調べ、NOWAITの役割と、そもそもの根本対策を理解することができた。
 
 この記事では、そのとき学んだことを整理する。
 
 ## ロック競合とは
 
-PostgreSQLはMVCC（Multi-Version Concurrency Control）により、読み取りと書き込みは基本的に競合しない。しかし、**同一行に対する書き込み同士（Writer vs Writer）は競合する**。
+PostgreSQLはMVCC（Multi-Version Concurrency Control）により、読み取りと書き込みは基本的に競合しない[^1]。しかし、**同一行に対する書き込み同士（Writer vs Writer）は競合する**[^2]。
+
+[^1]: [PostgreSQL Documentation - 13.1. Introduction](https://www.postgresql.org/docs/current/mvcc-intro.html)
+[^2]: [PostgreSQL Documentation - 13.3. Explicit Locking](https://www.postgresql.org/docs/current/explicit-locking.html)
 
 これは、データの整合性を保つために必要な動作だ。例えば、同じ口座から同時に引き落としが発生した場合、一方が完了するまで他方は待機する必要がある。
 
@@ -48,7 +51,7 @@ Tx-Bは、Tx-Aがコミット（またはロールバック）するまで**ブ�
 以下は、Goで2つのトランザクションを並行実行し、ロック競合を観察するコード。
 
 ```go
-// ===== Tx-A: 先にロックを取得し、3秒間保持 =====
+// ===== Tx-A: 先にロックを取得し、11秒間保持 =====
 go func() {
     tx, _ := db.Begin()
     logf("Tx-A", "BEGIN")
@@ -56,8 +59,8 @@ go func() {
     logf("Tx-A", "UPDATE実行（ロック取得）")
     tx.Exec("UPDATE users SET money = money + 100 WHERE id = 1")
 
-    logf("Tx-A", "ロックを3秒保持中...")
-    time.Sleep(3 * time.Second)
+    logf("Tx-A", "ロックを11秒保持中...")
+    time.Sleep(11 * time.Second)
 
     tx.Commit()
     logf("Tx-A", "COMMIT完了")
@@ -83,17 +86,17 @@ go func() {
 ### 実行結果
 
 ```text
-[12:00:00.000] [Tx-A] BEGIN
-[12:00:00.001] [Tx-A] UPDATE実行（ロック取得）
-[12:00:00.002] [Tx-A] ロックを3秒保持中...
-[12:00:01.000] [Tx-B] BEGIN
-[12:00:01.001] [Tx-B] UPDATE実行（ロック待ち...）
-[12:00:03.002] [Tx-A] COMMIT完了
-[12:00:03.003] [Tx-B] ロック取得！（2.00秒待った）
-[12:00:03.004] [Tx-B] COMMIT完了
+[11:25:31.036] [Tx-A] BEGIN
+[11:25:31.036] [Tx-A] UPDATE実行（ロック取得）
+[11:25:31.036] [Tx-A] ロックを11秒保持中...
+[11:25:32.046] [Tx-B] BEGIN
+[11:25:32.046] [Tx-B] UPDATE実行（ロック待ち...）
+[11:25:42.061] [Tx-A] COMMIT完了
+[11:25:42.061] [Tx-B] ロック取得！（10.02秒待った）
+[11:25:42.065] [Tx-B] COMMIT完了
 ```
 
-Tx-Bは約2秒間ブロックされた。本番環境でTx-Aが何分もロックを保持していたら、Tx-Bはその間ずっと待ち続けることになる。
+Tx-Bは約10秒間ブロックされた。本番環境でTx-Aが何分もロックを保持していたら、Tx-Bはその間ずっと待ち続けることになる。
 
 ## NOWAITで待たずに即エラーにする
 
@@ -140,13 +143,13 @@ go func() {
 ### 実行結果
 
 ```text
-[12:00:00.000] [Tx-A] BEGIN
-[12:00:00.001] [Tx-A] UPDATE実行（ロック取得）
-[12:00:00.002] [Tx-A] ロックを3秒保持中...
-[12:00:01.000] [Tx-B] BEGIN
-[12:00:01.001] [Tx-B] SELECT FOR UPDATE NOWAIT 実行...
-[12:00:01.002] [Tx-B] ★ NOWAIT エラー: pq: could not obtain lock on row in relation "users"
-[12:00:03.002] [Tx-A] COMMIT完了
+[11:26:15.309] [Tx-A] BEGIN
+[11:26:15.309] [Tx-A] UPDATE実行（ロック取得）
+[11:26:15.309] [Tx-A] ロックを11秒保持中...
+[11:26:16.323] [Tx-B] BEGIN
+[11:26:16.323] [Tx-B] SELECT FOR UPDATE NOWAIT 実行...
+[11:26:16.324] [Tx-B] ★ NOWAIT エラー: pq: could not obtain lock on row in relation "users"
+[11:26:26.322] [Tx-A] COMMIT完了
 [Main] Final money: 1100 （Tx-Bは失敗したので +100 のみ）
 ```
 
@@ -160,12 +163,12 @@ Tx-Bは待機せず、即座にエラーとなった。これにより、後続�
 
 ## NOWAITのユースケース
 
-| ユースケース | 説明 |
-|-------------|------|
-| 在庫確保・座席予約 | 競合時は「他の人が処理中です」と即座にエラーを返す |
-| リアルタイムAPI | SLAが厳しく、待機時間を許容できない場合 |
-| ジョブキュー | ロック済みの行はスキップし、別の行を処理 |
-| デッドロック回避 | 待機せずエラーにすることで、デッドロックのリスクを軽減 |
+| ユースケース       | 説明                                                   |
+| ------------------ | ------------------------------------------------------ |
+| 在庫確保・座席予約 | 競合時は「他の人が処理中です」と即座にエラーを返す     |
+| リアルタイムAPI    | SLAが厳しく、待機時間を許容できない場合                |
+| ジョブキュー       | ロック済みの行はスキップし、別の行を処理               |
+| デッドロック回避   | 待機せずエラーにすることで、デッドロックのリスクを軽減 |
 
 ## 根本解決も忘れずに
 
@@ -199,11 +202,11 @@ SET lock_timeout = '5s';
 
 ## まとめ
 
-| 項目 | 内容 |
-|------|------|
-| ロック競合 | MVCCでもWriter vs Writerは競合する |
-| 根本対策 | トランザクションを短く保つ、lock_timeout設定 |
-| NOWAIT | ロック取得できなければ即エラー（対処法の一つ） |
+| 項目       | 内容                                           |
+| ---------- | ---------------------------------------------- |
+| ロック競合 | MVCCでもWriter vs Writerは競合する             |
+| 根本対策   | トランザクションを短く保つ、lock_timeout設定   |
+| NOWAIT     | ロック取得できなければ即エラー（対処法の一つ） |
 
 今回作成したコードは以下のリポジトリで公開している。
 
