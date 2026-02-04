@@ -4,6 +4,7 @@ emoji: "⏱️"
 type: "tech"
 topics: ["postgresql", "database", "lock", "transaction"]
 published: true
+publication_name: "dip_techblog"
 ---
 
 ## 背景
